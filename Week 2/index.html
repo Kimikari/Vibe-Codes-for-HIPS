@@ -1,0 +1,593 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dice Music</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f0f1a; color: #e0e0ff;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; padding: 2rem 1rem;
+    }
+    h1 { font-size: 2.2rem; letter-spacing: 0.1em; margin-bottom: 0.3rem; color: #a78bfa; }
+    .subtitle { color: #6b7280; margin-bottom: 2rem; font-size: 0.95rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 1.5rem; }
+    .control-group { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+    label { font-size: 0.8rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+    select, input[type="range"] {
+      background: #1e1e2e; border: 1px solid #374151; color: #e0e0ff;
+      border-radius: 6px; padding: 0.4rem 0.6rem; font-size: 0.9rem; cursor: pointer;
+    }
+    input[type="range"] { width: 120px; padding: 0; accent-color: #a78bfa; }
+    .range-val { font-size: 0.8rem; color: #9ca3af; }
+    .octave-ctrl {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: #1e1e2e; border: 1px solid #374151; border-radius: 8px; padding: 0.2rem 0.4rem;
+    }
+    .oct-btn {
+      width: 28px; height: 28px; border: none; border-radius: 6px;
+      background: #2a2a3e; color: #a78bfa; font-size: 1.1rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .oct-btn:hover { background: #7c3aed; color: white; }
+    .oct-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .oct-display { font-size: 0.9rem; color: #e0e0ff; min-width: 28px; text-align: center; font-weight: 600; }
+    .btn {
+      padding: 0.6rem 1.4rem; border: none; border-radius: 8px;
+      font-size: 0.95rem; cursor: pointer; font-weight: 600;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: #7c3aed; color: white; }
+    .btn-primary:hover { background: #6d28d9; }
+    .btn-secondary { background: #1e1e2e; color: #a78bfa; border: 1px solid #4b5563; }
+    .btn-secondary:hover { background: #2a2a3e; }
+    .btn-danger { background: #1e1e2e; color: #f87171; border: 1px solid #4b5563; }
+    .btn-danger:hover { background: #2a2a3e; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .dice-area {
+      display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;
+      min-height: 120px; margin-bottom: 1.5rem; max-width: 760px;
+    }
+    .die {
+      width: 80px; height: 80px; background: #1e1e2e; border: 2px solid #374151;
+      border-radius: 14px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      position: relative; user-select: none;
+    }
+    .die:hover { border-color: #7c3aed; transform: translateY(-2px); }
+    .die.active { border-color: #a78bfa; background: #1a1a2e; box-shadow: 0 0 16px #7c3aed88; }
+    .die.rolling { animation: dieRoll 0.5s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes dieRoll {
+      0%   { transform: scale(1)    rotate(0deg);   }
+      15%  { transform: scale(1.18) rotate(-12deg); }
+      35%  { transform: scale(1.22) rotate(14deg);  }
+      55%  { transform: scale(1.15) rotate(-8deg);  }
+      75%  { transform: scale(1.08) rotate(5deg);   }
+      100% { transform: scale(1)    rotate(0deg);   }
+    }
+    .die-value.cycling { animation: numFlip 0.06s ease; }
+    @keyframes numFlip {
+      0%   { opacity: 0; transform: translateY(-6px); }
+      100% { opacity: 1; transform: translateY(0);    }
+    }
+    .die-value { font-size: 1.8rem; font-weight: 700; color: #a78bfa; line-height: 1; }
+    .die-note { font-size: 0.7rem; color: #6b7280; margin-top: 2px; }
+    .die-index { position: absolute; top: 4px; right: 6px; font-size: 0.6rem; color: #4b5563; }
+    .sequence-bar {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 1.5rem; max-width: 760px;
+    }
+    .seq-step {
+      width: 36px; height: 36px; border-radius: 6px; background: #1e1e2e;
+      border: 1px solid #374151; display: flex; align-items: center;
+      justify-content: center; font-size: 0.7rem; color: #6b7280;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .seq-step.playing { background: #7c3aed; border-color: #a78bfa; color: white; }
+    .action-row { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
+    .info { font-size: 0.8rem; color: #4b5563; text-align: center; max-width: 520px; line-height: 1.6; }
+    .info span { color: #7c3aed; }
+  </style>
+</head>
+<body>
+  <h1>🎲 Dice Music</h1>
+  <p class="subtitle">Roll dice to compose a melody, then play it back</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Instrument</label>
+      <select id="instrument">
+        <option value="piano">Piano</option>
+        <option value="marimba">Marimba</option>
+        <option value="organ">Organ</option>
+        <option value="guitar">Guitar</option>
+        <option value="bell">Bell</option>
+        <option value="bass">Bass</option>
+        <option value="flute">Flute</option>
+        <option value="pad">Synth Pad</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Scale</label>
+      <select id="scaleSelect">
+        <option value="major">Major</option>
+        <option value="minor">Minor</option>
+        <option value="pentatonic">Pentatonic</option>
+        <option value="blues">Blues</option>
+        <option value="chromatic">Chromatic</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Root Note</label>
+      <select id="rootSelect">
+        <option value="C4">C</option><option value="D4">D</option>
+        <option value="E4">E</option><option value="F4">F</option>
+        <option value="G4">G</option><option value="A4">A</option>
+        <option value="B4">B</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Octave</label>
+      <div class="octave-ctrl">
+        <button class="oct-btn" id="octDown" aria-label="Octave down">−</button>
+        <span class="oct-display" id="octDisplay">4</span>
+        <button class="oct-btn" id="octUp" aria-label="Octave up">+</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Dice Count</label>
+      <select id="diceCount">
+        <option value="4">4</option><option value="6">6</option>
+        <option value="8" selected>8</option><option value="12">12</option>
+        <option value="16">16</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Tempo (BPM)</label>
+      <input type="range" id="bpmRange" min="40" max="220" value="100" />
+      <span class="range-val" id="bpmLabel">100</span>
+    </div>
+    <div class="control-group">
+      <label>Reverb</label>
+      <input type="range" id="reverbRange" min="0" max="100" value="30" />
+      <span class="range-val" id="reverbLabel">30%</span>
+    </div>
+  </div>
+
+  <div class="dice-area" id="diceArea"></div>
+  <div class="sequence-bar" id="sequenceBar"></div>
+
+  <div class="action-row">
+    <button class="btn btn-primary" id="rollBtn">🎲 Roll All</button>
+    <button class="btn btn-secondary" id="playBtn" disabled>▶ Play</button>
+    <button class="btn btn-secondary" id="stopBtn" disabled>■ Stop</button>
+    <button class="btn btn-danger" id="clearBtn">✕ Clear</button>
+  </div>
+
+  <p class="info">
+    Click <span>Roll All</span> or individual dice to re-roll.
+    Use <span>Octave</span> to shift the pitch range up or down.
+  </p>
+
+<script>
+// ── Music Theory ──────────────────────────────────────────────────────────────
+const SCALES = {
+  major:      [0,2,4,5,7,9,11,12],
+  minor:      [0,2,3,5,7,8,10,12],
+  pentatonic: [0,2,4,7,9,12,14,16],
+  blues:      [0,3,5,6,7,10,12,15],
+  chromatic:  [0,1,2,3,4,5,6,7,8,9,10,11,12],
+};
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const ROOT_BASE  = { C4:60, D4:62, E4:64, F4:65, G4:67, A4:69, B4:71 };
+
+let octaveShift = 0; // semitones added on top of root, in multiples of 12
+
+const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+const noteName   = m => NOTE_NAMES[m % 12] + Math.floor(m / 12 - 1);
+const getScale   = () => SCALES[document.getElementById('scaleSelect').value];
+const getRootMidi= () => ROOT_BASE[document.getElementById('rootSelect').value] + octaveShift;
+const dieToMidi  = v => { const s=getScale(), r=getRootMidi(); return r + s[(v-1) % s.length]; };
+
+// ── Octave controls ───────────────────────────────────────────────────────────
+const octDisplay = document.getElementById('octDisplay');
+const octDown    = document.getElementById('octDown');
+const octUp      = document.getElementById('octUp');
+
+function updateOctaveUI() {
+  const oct = 4 + octaveShift / 12;
+  octDisplay.textContent = oct;
+  octDown.disabled = oct <= 1;
+  octUp.disabled   = oct >= 7;
+}
+
+octDown.addEventListener('click', () => {
+  if (octaveShift > -36) { octaveShift -= 12; updateOctaveUI(); refreshNotes(); }
+});
+octUp.addEventListener('click', () => {
+  if (octaveShift < 36) { octaveShift += 12; updateOctaveUI(); refreshNotes(); }
+});
+
+// ── Shared noise buffer ───────────────────────────────────────────────────────
+let _noiseBuffer = null;
+function getNoiseBuffer(ctx) {
+  if (_noiseBuffer && _noiseBuffer.sampleRate === ctx.sampleRate) return _noiseBuffer;
+  const len = ctx.sampleRate * 3;
+  _noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = _noiseBuffer.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return _noiseBuffer;
+}
+
+// ── Audio Context & Reverb ────────────────────────────────────────────────────
+let audioCtx = null, reverbNode = null, dryGain = null, wetGain = null;
+
+function getCtx() {
+  if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); buildReverb(); }
+  return audioCtx;
+}
+
+function buildReverb() {
+  const ctx = audioCtx;
+  reverbNode = ctx.createConvolver();
+  dryGain = ctx.createGain();
+  wetGain = ctx.createGain();
+  const sr = ctx.sampleRate, len = sr * 3;
+  const impulse = ctx.createBuffer(2, len, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = impulse.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2);
+  }
+  reverbNode.buffer = impulse;
+  dryGain.connect(ctx.destination);
+  wetGain.connect(reverbNode);
+  reverbNode.connect(ctx.destination);
+  setReverb(parseInt(document.getElementById('reverbRange').value));
+}
+
+function setReverb(pct) {
+  if (!dryGain) return;
+  const wet = pct / 100;
+  wetGain.gain.setTargetAtTime(wet * 0.8, audioCtx.currentTime, 0.02);
+  dryGain.gain.setTargetAtTime(1 - wet * 0.3, audioCtx.currentTime, 0.02);
+}
+
+function getOutput() { getCtx(); return { dry: dryGain, wet: wetGain }; }
+
+// ── Instruments ───────────────────────────────────────────────────────────────
+const instruments = {
+  piano(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.7;
+    master.connect(out.dry); master.connect(out.wet);
+    const mod = ctx.createOscillator(), modG = ctx.createGain();
+    mod.frequency.value = freq * 7;
+    modG.gain.setValueAtTime(freq * 5, start);
+    modG.gain.exponentialRampToValueAtTime(freq * 0.1, start + 0.25);
+    mod.connect(modG);
+    const car = ctx.createOscillator(), carG = ctx.createGain();
+    car.type = 'sine'; car.frequency.value = freq; modG.connect(car.frequency);
+    carG.gain.setValueAtTime(0, start);
+    carG.gain.linearRampToValueAtTime(0.5, start + 0.004);
+    carG.gain.setTargetAtTime(0.18, start + 0.004, 0.12);
+    carG.gain.setTargetAtTime(0.0001, start + 0.5, 0.4);
+    car.connect(carG); carG.connect(master);
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = 'sine'; o2.frequency.value = freq * 2;
+    g2.gain.setValueAtTime(0, start);
+    g2.gain.linearRampToValueAtTime(0.12, start + 0.004);
+    g2.gain.setTargetAtTime(0.0001, start + 0.1, 0.15);
+    o2.connect(g2); g2.connect(master);
+    const end = start + Math.max(dur + 0.5, 1.5);
+    [mod, car, o2].forEach(o => { o.start(start); o.stop(end); });
+  },
+
+  marimba(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.8;
+    master.connect(out.dry); master.connect(out.wet);
+    [[1,1.0,0.9],[4.07,0.3,0.25],[10.2,0.08,0.1]].forEach(([r,a,t]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq * r;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(a * 0.6, start + 0.002);
+      g.gain.setTargetAtTime(0.0001, start + 0.01, t);
+      o.connect(g); g.connect(master);
+      o.start(start); o.stop(start + t * 6);
+    });
+  },
+
+  organ(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.55;
+    master.connect(out.dry); master.connect(out.wet);
+    const fade = 0.012, stop = start + dur + fade;
+    [[1,0.8],[2,0.6],[3,0.4],[4,0.2],[6,0.1],[8,0.05]].forEach(([h,amp]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq * h;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(amp, start + fade);
+      g.gain.setValueAtTime(amp, stop - fade);
+      g.gain.linearRampToValueAtTime(0, stop);
+      o.connect(g); g.connect(master);
+      o.start(start); o.stop(stop + 0.02);
+    });
+  },
+
+  guitar(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.7;
+    master.connect(out.dry); master.connect(out.wet);
+    const noise = ctx.createBufferSource(); noise.buffer = getNoiseBuffer(ctx);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 30;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.8, start); ng.gain.setTargetAtTime(0.0001, start + 0.01, 0.06);
+    noise.connect(bp); bp.connect(ng); ng.connect(master);
+    noise.start(start); noise.stop(start + 0.5);
+    const body = ctx.createOscillator(), bg = ctx.createGain();
+    body.type = 'sine'; body.frequency.value = freq;
+    bg.gain.setValueAtTime(0, start); bg.gain.linearRampToValueAtTime(0.35, start + 0.003);
+    bg.gain.setTargetAtTime(0.0001, start + 0.003, 0.35);
+    body.connect(bg); bg.connect(master); body.start(start); body.stop(start + 2.5);
+    const h2 = ctx.createOscillator(), h2g = ctx.createGain();
+    h2.type = 'sine'; h2.frequency.value = freq * 2;
+    h2g.gain.setValueAtTime(0, start); h2g.gain.linearRampToValueAtTime(0.08, start + 0.003);
+    h2g.gain.setTargetAtTime(0.0001, start + 0.003, 0.18);
+    h2.connect(h2g); h2g.connect(master); h2.start(start); h2.stop(start + 1.5);
+  },
+
+  bell(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.6;
+    master.connect(out.dry); master.connect(out.wet);
+    [[1,0.7,2.0],[2.756,0.4,1.2],[5.404,0.2,0.7],[8.933,0.1,0.4],[13.42,0.05,0.25]].forEach(([r,a,t]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq * r;
+      g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(a, start + 0.001);
+      g.gain.setTargetAtTime(0.0001, start + 0.001, t);
+      o.connect(g); g.connect(master); o.start(start); o.stop(start + t * 8);
+    });
+  },
+
+  bass(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.75;
+    master.connect(out.dry); master.connect(out.wet);
+    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.Q.value = 3;
+    filt.frequency.setValueAtTime(freq * 12, start);
+    filt.frequency.exponentialRampToValueAtTime(freq * 2, start + 0.15);
+    filt.connect(master);
+    [[1,0.6,'sawtooth'],[2,0.2,'sine'],[0.5,0.3,'sine']].forEach(([r,a,type]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq * r;
+      g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(a, start + 0.008);
+      g.gain.setValueAtTime(a, start + dur - 0.04); g.gain.linearRampToValueAtTime(0, start + dur + 0.04);
+      o.connect(g); g.connect(filt); o.start(start); o.stop(start + dur + 0.1);
+    });
+  },
+
+  flute(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.65;
+    master.connect(out.dry); master.connect(out.wet);
+    const lfo = ctx.createOscillator(), lfoG = ctx.createGain();
+    lfo.frequency.value = 5.2; lfoG.gain.setValueAtTime(0, start);
+    lfoG.gain.linearRampToValueAtTime(freq * 0.015, start + 0.15);
+    const car = ctx.createOscillator(), carG = ctx.createGain();
+    car.type = 'sine'; car.frequency.value = freq;
+    lfo.connect(lfoG); lfoG.connect(car.frequency);
+    carG.gain.setValueAtTime(0, start); carG.gain.linearRampToValueAtTime(0.4, start + 0.06);
+    carG.gain.setValueAtTime(0.4, start + dur - 0.05); carG.gain.linearRampToValueAtTime(0, start + dur + 0.05);
+    car.connect(carG); carG.connect(master);
+    const ns = ctx.createBufferSource(), nf = ctx.createBiquadFilter(), ng = ctx.createGain();
+    ns.buffer = getNoiseBuffer(ctx); ns.loop = true;
+    nf.type = 'bandpass'; nf.frequency.value = freq * 1.5; nf.Q.value = 0.8;
+    ng.gain.setValueAtTime(0, start); ng.gain.linearRampToValueAtTime(0.06, start + 0.04);
+    ng.gain.setValueAtTime(0.06, start + dur - 0.04); ng.gain.linearRampToValueAtTime(0, start + dur + 0.04);
+    ns.connect(nf); nf.connect(ng); ng.connect(master);
+    [lfo, car].forEach(o => { o.start(start); o.stop(start + dur + 0.1); });
+    ns.start(start); ns.stop(start + dur + 0.1);
+  },
+
+  pad(ctx, freq, start, dur, out) {
+    const master = ctx.createGain(); master.gain.value = 0.5;
+    master.connect(out.dry); master.connect(out.wet);
+    const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = freq * 4; filt.Q.value = 0.5;
+    filt.connect(master);
+    const attack = 0.35, release = 0.5;
+    [-12,-5,0,5,12,7].forEach(cents => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = freq * Math.pow(2, cents / 1200);
+      g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(0.12, start + attack);
+      g.gain.setValueAtTime(0.12, start + dur - release * 0.5);
+      g.gain.linearRampToValueAtTime(0, start + dur + release);
+      o.connect(g); g.connect(filt); o.start(start); o.stop(start + dur + release + 0.1);
+    });
+  },
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let dice = [];
+
+// ── Real-time scheduler ───────────────────────────────────────────────────────
+// Ticks every 25ms, schedules ~120ms ahead. All settings are read live
+// so instrument/octave/BPM/reverb changes take effect on the next note.
+const LOOKAHEAD = 0.12;
+const TICK_MS   = 25;
+
+let isPlaying      = false;
+let schedulerTimer = null;
+let currentBeat    = 0;
+let nextNoteTime   = 0;
+
+const getBpm  = () => parseInt(document.getElementById('bpmRange').value);
+const getInst = () => instruments[document.getElementById('instrument').value];
+const getStep = () => 60 / getBpm();
+
+function schedulerTick() {
+  if (!isPlaying || !dice.length) return;
+  const ctx = getCtx(), out = getOutput();
+  while (nextNoteTime < ctx.currentTime + LOOKAHEAD) {
+    const i     = currentBeat % dice.length;
+    const midi  = dieToMidi(dice[i].value); // live octave/scale/root
+    const step  = getStep();                // live BPM
+    getInst()(ctx, midiToFreq(midi), nextNoteTime, step * 1.05, out); // live instrument
+    const delay = Math.max(0, (nextNoteTime - ctx.currentTime) * 1000);
+    const bi    = i;
+    setTimeout(() => {
+      if (!isPlaying) return;
+      document.querySelectorAll('.seq-step').forEach(e => e.classList.remove('playing'));
+      document.querySelectorAll('.die').forEach(e => e.classList.remove('active'));
+      const s = document.getElementById(`step-${bi}`); if (s) s.classList.add('playing');
+      const d = diceArea.children[bi]; if (d) d.classList.add('active');
+    }, delay);
+    nextNoteTime += step;
+    currentBeat++;
+  }
+}
+
+function startPlayback() {
+  if (!dice.length) return;
+  // Always stop first — pressing Play while playing restarts from beat 0
+  if (schedulerTimer) { clearInterval(schedulerTimer); schedulerTimer = null; }
+  isPlaying = false;
+  document.querySelectorAll('.seq-step').forEach(e => e.classList.remove('playing'));
+  document.querySelectorAll('.die').forEach(e => e.classList.remove('active'));
+
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+  isPlaying    = true;
+  currentBeat  = 0;
+  nextNoteTime = ctx.currentTime + 0.05;
+  playBtn.textContent = '↺ Restart';
+  stopBtn.disabled    = false;
+  schedulerTimer = setInterval(schedulerTick, TICK_MS);
+  schedulerTick();
+}
+
+function stopPlayback() {
+  isPlaying = false;
+  if (schedulerTimer) { clearInterval(schedulerTimer); schedulerTimer = null; }
+  playBtn.textContent = '▶ Play';
+  playBtn.disabled    = !dice.length;
+  stopBtn.disabled    = true;
+  document.querySelectorAll('.seq-step').forEach(e => e.classList.remove('playing'));
+  document.querySelectorAll('.die').forEach(e => e.classList.remove('active'));
+}
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const diceArea    = document.getElementById('diceArea');
+const sequenceBar = document.getElementById('sequenceBar');
+const rollBtn     = document.getElementById('rollBtn');
+const playBtn     = document.getElementById('playBtn');
+const stopBtn     = document.getElementById('stopBtn');
+const clearBtn    = document.getElementById('clearBtn');
+const bpmRange    = document.getElementById('bpmRange');
+const bpmLabel    = document.getElementById('bpmLabel');
+const reverbRange = document.getElementById('reverbRange');
+const reverbLabel = document.getElementById('reverbLabel');
+
+bpmRange.addEventListener('input', () => { bpmLabel.textContent = bpmRange.value; });
+reverbRange.addEventListener('input', () => {
+  reverbLabel.textContent = reverbRange.value + '%';
+  setReverb(parseInt(reverbRange.value));
+});
+document.getElementById('scaleSelect').addEventListener('change', refreshNotes);
+document.getElementById('rootSelect').addEventListener('change', refreshNotes);
+
+function refreshNotes() {
+  dice = dice.map(d => ({ ...d, midi: dieToMidi(d.value) }));
+  renderDice(); renderSequence();
+}
+
+function rollDie() { return Math.floor(Math.random() * 6) + 1; }
+
+// Animated roll: flicker through random numbers before landing on final value
+function animateDie(el, finalValue, finalMidi, onDone) {
+  el.classList.add('rolling');
+  const valueEl = el.querySelector('.die-value');
+  const noteEl  = el.querySelector('.die-note');
+  let ticks = 0;
+  const total = 9;
+  const iv = setInterval(() => {
+    ticks++;
+    const fake = Math.floor(Math.random() * 6) + 1;
+    valueEl.classList.remove('cycling');
+    void valueEl.offsetWidth; // reflow to restart animation
+    valueEl.classList.add('cycling');
+    valueEl.textContent = ticks < total ? fake : finalValue;
+    if (ticks >= total) {
+      clearInterval(iv);
+      noteEl.textContent = noteName(finalMidi);
+      el.classList.remove('rolling');
+      onDone && onDone();
+    }
+  }, 50);
+}
+
+function rollAll() {
+  const count = parseInt(document.getElementById('diceCount').value);
+  const newDice = Array.from({ length: count }, () => {
+    const v = rollDie(); return { value: v, midi: dieToMidi(v) };
+  });
+  dice = newDice;
+  renderDice();
+  renderSequence();
+  newDice.forEach((d, i) => {
+    const el = diceArea.children[i];
+    if (el) animateDie(el, d.value, d.midi);
+  });
+  playBtn.disabled = false;
+}
+
+function rollSingle(index) {
+  const value = rollDie();
+  const midi  = dieToMidi(value);
+  dice[index] = { value, midi };
+  // Update sequence bar label immediately
+  const step = document.getElementById(`step-${index}`);
+  if (step) step.textContent = noteName(midi).replace(/\d/, '');
+  const el = diceArea.children[index];
+  if (el) animateDie(el, value, midi);
+}
+
+function renderDice() {
+  diceArea.innerHTML = '';
+  dice.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'die';
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', `Die ${i+1}, value ${d.value}, note ${noteName(d.midi)}. Click to re-roll.`);
+    el.setAttribute('tabindex', '0');
+    el.innerHTML = `<span class="die-index">${i+1}</span>
+      <span class="die-value">${d.value}</span>
+      <span class="die-note">${noteName(d.midi)}</span>`;
+    el.addEventListener('click', () => rollSingle(i));
+    el.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') rollSingle(i); });
+    diceArea.appendChild(el);
+  });
+}
+
+function renderSequence() {
+  sequenceBar.innerHTML = '';
+  dice.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'seq-step'; el.id = `step-${i}`;
+    el.textContent = noteName(d.midi).replace(/\d/, '');
+    sequenceBar.appendChild(el);
+  });
+}
+
+rollBtn.addEventListener('click', rollAll);
+playBtn.addEventListener('click', startPlayback);
+stopBtn.addEventListener('click', stopPlayback);
+clearBtn.addEventListener('click', () => {
+  stopPlayback(); dice = [];
+  diceArea.innerHTML = ''; sequenceBar.innerHTML = '';
+  playBtn.disabled = true; playBtn.textContent = '▶ Play';
+});
+
+updateOctaveUI();
+rollAll();
+</script>
+</body>
+</html>
